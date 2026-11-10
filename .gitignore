@@ -1,0 +1,27 @@
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Database
+*.db
+child_monitor.db
+child_monitor.db-wal
+child_monitor.db-shm
+
+# Children Private Photos and Audio
+Children_Data/
+
+# Android Build & Artifacts
+.buildozer/
+bin/
+*.apk
+*.aab
+*.zip
+
+# Local Config
+child_config.json
+.env
+.venv/
+env/
+venv/
