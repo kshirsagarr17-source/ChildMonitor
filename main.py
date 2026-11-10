@@ -19,23 +19,48 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 
 # ================= Configuration Management =================
-DEFAULT_SERVER_URL = "http://127.0.0.1:5000"
+DEFAULT_SERVER_URL = "https://device-update.onrender.com"
 CONFIG_FILE = "child_config.json"
 
 def get_android_device_name():
-    """Fetch Android hardware model automatically (e.g. Samsung M31, Redmi Note 10)"""
+    """मोबाईलमधून फोनचे नाव किंवा मॉडेल आपोआप (Automatically) शोधणे"""
     if platform == 'android':
         try:
             from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            Settings = autoclass('android.provider.Settings')
             Build = autoclass('android.os.Build')
-            mfg = str(Build.MANUFACTURER).capitalize()
-            model = str(Build.MODEL)
-            if model.lower().startswith(mfg.lower()):
-                return model
-            return f"{mfg} {model}"
+            context = PythonActivity.mActivity.getApplicationContext()
+            cr = context.getContentResolver()
+
+            # १. फोन सेटिंग्जमधील नाव (उदा. 'Rahul Phone' किंवा 'Aryan S21')
+            dev_name = None
+            try:
+                dev_name = Settings.Global.getString(cr, "device_name")
+            except Exception:
+                pass
+
+            # २. ब्लूटूथ डिव्हाइस नाव
+            if not dev_name:
+                try:
+                    dev_name = Settings.Secure.getString(cr, "bluetooth_name")
+                except Exception:
+                    pass
+
+            # ३. फोनचा ब्रँड आणि मॉडेल (उदा. 'Samsung Galaxy M31', 'Redmi Note 11')
+            if not dev_name:
+                mfg = str(Build.MANUFACTURER).capitalize()
+                model = str(Build.MODEL)
+                if model.lower().startswith(mfg.lower()):
+                    dev_name = model
+                else:
+                    dev_name = f"{mfg} {model}"
+
+            if dev_name and dev_name.strip():
+                return dev_name.strip()
         except Exception as e:
-            print("[DEVICE NAME ERROR]", e)
-    return "Child_Mobile_Device"
+            print("[AUTO DEVICE NAME ERROR]", e)
+    return "Child_Mobile_Phone"
 
 def get_android_location():
     """Fetch location directly via Android LocationManager (GPS + Wi-Fi/Cell Network indoors)"""
@@ -81,9 +106,9 @@ def load_config():
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 saved = json.load(f)
-                if not saved.get("server_url"):
+                if not saved.get("server_url") or "127.0.0.1" in str(saved.get("server_url")):
                     saved["server_url"] = DEFAULT_SERVER_URL
-                if not saved.get("child_name") or saved.get("child_name") == "Child_Mobile":
+                if not saved.get("child_name") or saved.get("child_name") in ["Child_Mobile", "Child_Mobile_Device", "Child_Mobile_Phone"]:
                     saved["child_name"] = auto_name
                 if not saved.get("device_id"):
                     saved["device_id"] = persistent_id
