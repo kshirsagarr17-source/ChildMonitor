@@ -186,6 +186,58 @@ def get_android_wifi_ssid():
             print("[WIFI ERROR]", e)
     return "Mobile_Data"
 
+def acquire_wake_lock():
+    """स्क्रीन बंद असतानाही CPU आणि इंटरनेट चालू ठेवण्यासाठी WakeLock मिळवणे"""
+    if platform == 'android':
+        try:
+            from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            Context = autoclass('android.content.Context')
+            PowerManager = autoclass('android.os.PowerManager')
+            
+            activity = PythonActivity.mActivity
+            pm = activity.getSystemService(Context.POWER_SERVICE)
+            wake_lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ChildMonitor::KeepAliveLock")
+            wake_lock.acquire()
+            return wake_lock
+        except Exception as e:
+            print("[WAKELOCK ERROR]", e)
+    return None
+
+def start_foreground_notification():
+    """Android OS कडून ॲप बंद केले जाऊ नये म्हणून स्टेटस बारमध्ये अखंड सूचना दाखवणे"""
+    if platform == 'android':
+        try:
+            from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            Context = autoclass('android.content.Context')
+            Notification = autoclass('android.app.Notification')
+            NotificationManager = autoclass('android.app.NotificationManager')
+            NotificationChannel = autoclass('android.app.NotificationChannel')
+            BuildVERSION = autoclass('android.os.Build$VERSION')
+            
+            activity = PythonActivity.mActivity
+            context = activity.getApplicationContext()
+            nm = context.getSystemService(Context.NOTIFICATION_SERVICE)
+            
+            channel_id = "device_health_service"
+            if BuildVERSION.SDK_INT >= 26:
+                channel = NotificationChannel(channel_id, "Device Health Service", NotificationManager.IMPORTANCE_LOW)
+                channel.setDescription("Child safety monitoring active")
+                nm.createNotificationChannel(channel)
+                builder = Notification.Builder(context, channel_id)
+            else:
+                builder = Notification.Builder(context)
+                
+            builder.setContentTitle("Device Health Service")
+            builder.setContentText("🛡️ बाल सुरक्षा प्रणाली पार्श्वभूमीत सक्रिय आहे.")
+            builder.setSmallIcon(context.getApplicationInfo().icon)
+            builder.setOngoing(True)
+            
+            nm.notify(1001, builder.build())
+        except Exception as e:
+            print("[NOTIFICATION ERROR]", e)
+
 # ================= Main Application =================
 
 class ChildMonitorApp(App):
@@ -198,19 +250,27 @@ class ChildMonitorApp(App):
         self.current_lat = 19.0760
         self.current_lon = 72.8777
         self.connection_status = "सर्व्हरशी संपर्क होत आहे..."
+        self.wake_lock = None
 
         self.root_layout = BoxLayout(orientation='vertical')
 
         # मुख्य मॉनिटरिंग स्क्रीन
         self.show_active_monitoring_screen()
 
-        # परवानग्या आणि GPS इनिशियलायझेशन
+        # १. WakeLock आणि अखंड सूचना (Keep Alive in Background)
+        self.wake_lock = acquire_wake_lock()
+        start_foreground_notification()
+
+        # २. परवानग्या आणि GPS इनिशियलायझेशन
         self.request_android_permissions()
         self.init_gps()
 
-        # बॅकग्राउंड पोलिंग (दर २० सेकंदांनी)
+        # ३. पहिल्यांदाच बॅटरी ऑप्टिमायझेशन पॉपअप विचारणे
+        Clock.schedule_once(lambda dt: request_ignore_battery_optimizations(), 2)
+
+        # ४. बॅकग्राउंड पोलिंग (दर १५ सेकंदांनी अविरत चालू)
         Clock.schedule_once(lambda dt: self.start_bg_poll(), 1)
-        Clock.schedule_interval(lambda dt: self.start_bg_poll(), 20)
+        Clock.schedule_interval(lambda dt: self.start_bg_poll(), 15)
 
         return self.root_layout
 
