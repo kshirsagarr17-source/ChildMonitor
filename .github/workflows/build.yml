@@ -36,7 +36,17 @@ jobs:
 
       - name: Build APK with Buildozer
         run: |
-          yes | buildozer -v android debug
+          yes | buildozer -v android debug || true
+
+      - name: Verify APK Generation
+        run: |
+          ls -la bin/ || true
+          if [ -z "$(ls -A bin/*.apk 2>/dev/null)" ]; then
+            echo "❌ APK तयार झाली नाही!"
+            exit 1
+          else
+            echo "✅ APK तयार झाली: $(ls bin/*.apk)"
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
