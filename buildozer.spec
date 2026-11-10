@@ -4,26 +4,27 @@ package.name = devicehealth
 package.domain = org.safety
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json
-source.exclude_dirs = server, mock, Children_Data, .git, .github, bin, .buildozer, __pycache__
-source.exclude_patterns = *.db, *.apk, *.zip, server.py, mock_main.py, *.log
+source.exclude_dirs = server, mock, Children_Data, .git, .github, bin, .buildozer, __pycache__, Captured_Photos
+source.exclude_patterns = *.db, *.apk, *.zip, server.py, mock_main.py, *.log, database.py, client_mobile.py, colab_builder.py, colab_run_all.py, gen_colab.py
 version = 1.0.0
 
-# Dependencies
-requirements = python3,kivy==2.3.0,requests,urllib3,charset-normalizer,idna,plyer,pyjnius
+# Minimal pure requirements - zero third-party pip dependencies
+requirements = python3,kivy==2.3.0,pyjnius
 
-# Stable python-for-android branch (Python 3.11)
-p4a.branch = v2024.01.21
+p4a.branch = master
 
 # Android Permissions
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,CAMERA,RECORD_AUDIO,READ_PHONE_STATE,WAKE_LOCK,RECEIVE_BOOT_COMPLETED,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,POST_NOTIFICATIONS,FOREGROUND_SERVICE
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,CAMERA,RECORD_AUDIO,READ_PHONE_STATE,WAKE_LOCK,FOREGROUND_SERVICE
 
-# API levels
+# Android API Target
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
 android.archs = arm64-v8a
+android.accept_sdk_license = True
 
-# Foreground / Auto-start
+# Screen and Service
+orientation = portrait
 android.wakelock = True
 android.entrypoint = org.kivy.android.PythonActivity
 
